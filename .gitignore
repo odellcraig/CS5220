@@ -12,3 +12,4 @@
 *.la
 *.a
 OriginalCode/Debug/
+TCPFileServer/Debug/src/TCPFileServer.d
