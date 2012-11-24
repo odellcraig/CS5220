@@ -1,16 +1,26 @@
 /*
  * Util.cpp
+ *
+ *  Authors: Craig Odell and Steven Wilson
  */
+
 
 #include "Util.h"
 #include <sstream>
-#include <iostream>
 #include <cstdio>
+#include <iostream>
 #include <stdint.h>
+#include <sys/time.h>
 
 using namespace std;
 
 
+uint32_t Util::getCurrentTimeMs(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
 
 
 

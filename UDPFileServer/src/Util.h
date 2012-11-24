@@ -1,5 +1,7 @@
 /*
  * Util.h
+ *
+ *  Authors: Craig Odell and Steven Wilson
  */
 
 #ifndef UTIL_H
@@ -15,6 +17,7 @@
 
 class Util {
 public:
+	static uint32_t getCurrentTimeMs(void);
 	static uint16_t toShort(const std::string &);
 	static uint32_t toInt(const std::string &);
 	///Util: dump raw data

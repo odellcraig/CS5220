@@ -136,15 +136,18 @@ bool Socket::connect(const std::string host, const int port) {
 	if (!is_valid())
 		return false;
 
+	struct hostent *h;						/* info about server */
+	struct sockaddr_in channel;				/* holds IP address */
+	h = gethostbyname(host.c_str());		/* look up host's IP address */
+	if (!h) {
+		throw string("Error - gethostbyname failed. Aborting.");
+	}
+
 	m_addr.sin_family = AF_INET;
 	m_addr.sin_port = htons(port);
+	memcpy(&m_addr.sin_addr.s_addr, h->h_addr, h->h_length);
 
-	int status = inet_pton(AF_INET, host.c_str(), &m_addr.sin_addr);
-
-	if (errno == EAFNOSUPPORT)
-		return false;
-
-	status = ::connect(m_sock, (sockaddr *) &m_addr, sizeof(m_addr));
+	int status = ::connect(m_sock, (sockaddr *) &m_addr, sizeof(m_addr));
 
 	if (status == 0)
 		return true;

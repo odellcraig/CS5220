@@ -1,6 +1,11 @@
-/*
- *      Authors: Craig Odell and Steven Wilson
- */
+//============================================================================
+// Name        : UDPFileServer.cpp
+// Author      : Craig Odell and Steven Wilson
+// Version     :
+// Copyright   : 
+// Description : File server with different ARQ protocols using UDP sockets
+//============================================================================
+
 
 /* Cpp includes */
 #include <iostream>
@@ -14,7 +19,7 @@
 /* Local includes */
 #include "Server.h"
 #include "Client.h"
-
+#include "Util.h"
 // For debugging
 //#define debug
 
@@ -31,14 +36,16 @@ void printUsage(string file) {
 	os << "Help: -? or -h\n";
 	os << "Usage:- Client (" << file << "):"
 			<< "\n\t-c              #Act as client"
-			<< "\n\t-p portNumber	#Use this port\n"
-			<< "\n\t<Remote Server Name> <File Name>\n";
+			<< "\n\t-p portNumber	#Use this port"
+			<< "\n\t-t <ARQ-Type>   #1 - Stop and Wait, 2 - Go Back N, 3 - Selective Repeat\n"
+			<< "\n\t<Remote Server Name> <File Name>\n\n";
 	os << "Usage:- Server (" << file << "):"
 			<< "\n\t-s              #Act as server"
-			<< "\n\t-p portNumber	#Use this port\n";
+			<< "\n\t-p portNumber	#Use this port"
+			<< "\n\t-t <ARQ-Type>   #1 - Stop and Wait, 2 - Go Back N, 3 - Selective Repeat\n";
 	os << "\nClient Example:\n>" << file
-			<< " -c -p 1234 192.168.0.10 MyFile.txt\n";
-	os << "Server Example:\n>" << file << " -s -p 1234\n";
+			<< " -c -p 1234 -t1 192.168.0.10 MyFile.txt\n";
+	os << "Server Example:\n>" << file << " -s -p 1234 -t1\n";
 	cerr << os.str() << endl;
 }
 
@@ -50,8 +57,9 @@ int main(int argc, char **argv) {
 	bool isClient = false;
 	string serverName = "";
 	string transferFileName = "";
+	ARQBase::ARQType arqType = ARQBase::ARQTypeStopAndWait;
 	string port = DEFAULT_PORT;
-	while ((optChar = getopt(argc, argv, "h?csp:")) != -1) {
+	while ((optChar = getopt(argc, argv, "h?csp:t:")) != -1) {
 		switch (optChar) {
 		case '?':
 		case 'h':
@@ -70,6 +78,9 @@ int main(int argc, char **argv) {
 			// Act as the client
 			isClient = true;
 			break;
+		case 't':
+			arqType = (ARQBase::ARQType)Util::toInt(optarg);
+			break;
 		default:
 			printUsage(binaryName);
 			exit(-1);
@@ -87,7 +98,7 @@ int main(int argc, char **argv) {
 
 	/* If Operating as a Server */
 	if (isServer) {
-		Server server(port);
+		Server server(port, arqType);
 		try {
 			server.start();
 		} catch (string &Error) {
@@ -108,7 +119,7 @@ int main(int argc, char **argv) {
 		transferFileName = argv[1];
 
 		//Deal with the input arguments
-		Client client(serverName, port);
+		Client client(serverName, port, arqType);
 		try {
 			if (client.getFile(transferFileName))
 				cout << "File Received. Done.\n";
@@ -119,4 +130,3 @@ int main(int argc, char **argv) {
 	}
 	return 0;
 }
-
