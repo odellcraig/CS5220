@@ -20,6 +20,7 @@
 #define UDPSOCKET_H_
 
 #include <string>
+#include <stdint.h>
 
 struct sockaddr;
 
@@ -28,6 +29,7 @@ class UDPSocket
 {
 public:
     UDPSocket();
+    UDPSocket(uint32_t iDropPercentage);
     virtual ~UDPSocket();
 
     unsigned int getMaxSegmentSize() {return 1472-2;}
@@ -72,9 +74,16 @@ protected:
     // socket has been created but before the bind().
     virtual bool setSocketOptions();
 
+private:
+    /**
+     * Will tell sendTo to drop the packet for mDropPercentage of packets
+     */
+    bool isRandomDrop();
+
 
 protected:
     int sockfd;
+    uint32_t mDropPercentage;
 };
 
 

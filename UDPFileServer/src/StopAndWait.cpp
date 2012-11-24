@@ -20,7 +20,9 @@ using namespace std;
 
 
 namespace {
-	const int TIMEOUT = 500; // 500ms timeout
+	const int TIMEOUT = 1000; // 1000ms timeout
+	const int HEADERSIZE = 2;
+	const int RETX_LIMIT = 10;
 }
 
 StopAndWait::StopAndWait(UDPSocket &iSocket) :
@@ -84,22 +86,31 @@ void StopAndWait::sendData(deque<unsigned char>& buffer) {
 
 		//Retx Loop Waits for Ack
 		bool success;
+		int retxCount = 0;
 		do {
 			success = sendDatagramWaitForAck(buf, bytesCopied);
-
-			if(!success) cerr << "Retransmit!!\n";
+			if(!success) cerr << "Retransmit!\n";
+			retxCount++;
 
 		//Wait for either ack, dup-ack, or timeout
-		}while(!success);
+		}while(!success && retxCount < RETX_LIMIT);
+
+		if(retxCount >= RETX_LIMIT) {
+			cerr << "Retransmission Limit Reached. Aborting.";
+			return;
+		}
 
 	}
 }
 
 bool StopAndWait::sendDatagramWaitForAck(char *buf, int length)
 {
+	cout << "Sending Datagram of length: " << length << endl;
+
 	//Send the packet
 	mSocket.sendTo(buf, length, mDestinationAddress, mDestinationPort);
 	uint32_t sendTime = Util::getCurrentTimeMs();
+
 
 	//Retransmit if dup-ack or timeout
 	do {
@@ -107,10 +118,15 @@ bool StopAndWait::sendDatagramWaitForAck(char *buf, int length)
 		if(mSocket.hasData(10)) {
 			//If we received the correct ack, return
 			//If it was a duplicate ack, recv ack will return false
-			if(recvAck()) return true;
-			else return false;
+			if(recvAck()) {return true; }
+			else {return false;}
 		}
-	}while((Util::getCurrentTimeMs() - sendTime) > TIMEOUT);
+
+
+
+	}while((Util::getCurrentTimeMs() - sendTime) < TIMEOUT);
+
+	cerr << "Timeout!" << endl;
 
 	return false;
 }
@@ -192,8 +208,11 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		else {
 			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize());
 		}
-		buffer.insert(buffer.end(), &receiveBuffer[0], &receiveBuffer[recvBytes]);
-		consumeHeaderSendAck(buffer);
+
+		cout << "Received datagram of length: " << recvBytes << endl;
+
+		buffer.insert(buffer.end(), &receiveBuffer[2], &receiveBuffer[recvBytes]);
+		consumeHeaderSendAck(receiveBuffer[0], receiveBuffer[1]);
 		return;
 	}
 
@@ -206,25 +225,32 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		else {
 			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize());
 		}
-		buffer.insert(buffer.end(), &receiveBuffer[0], &receiveBuffer[recvBytes]);
-		consumeHeaderSendAck(buffer);
+
+		cout << "Received datagram of length: " << recvBytes << endl;
+
+		//Only count datagram if it's our expected sequence number
+		if(receiveBuffer[0] == mAckNumber){
+			size -= (recvBytes-HEADERSIZE);
+		}
+
+		buffer.insert(buffer.end(), &receiveBuffer[2], &receiveBuffer[recvBytes]);
+		consumeHeaderSendAck(receiveBuffer[0], receiveBuffer[1]);
 
 		//Clear out receive buffer
 		memset(receiveBuffer, 0, mSocket.getMaxSegmentSize());
-		size -= recvBytes;
+
+		cout << "Bytes Remaining: " << size << endl;
 	}
 
 }
 
-void StopAndWait::consumeHeaderSendAck(std::deque<unsigned char>& buffer) {
-	uint8_t receivedSeq = buffer.front();buffer.pop_front();
-	uint8_t receivedAck = buffer.front();buffer.pop_front();
+void StopAndWait::consumeHeaderSendAck(uint8_t seq, uint8_t ack) {
 
-	mLastReceivedAckNumber = receivedAck;
+	mLastReceivedAckNumber = ack;
 
 	// If this is the packet we expected, send ack increase ack number
-	if(receivedSeq == mAckNumber) {
-		mAckNumber = (mAckNumber+1) % 2;
+	if(seq == mAckNumber) {
+		mAckNumber = (mAckNumber+1)%2;
 	}
 	//Note: if this wasn't the expected seq, then the send ack will be a duplicate ack
 	sendAck();
@@ -240,6 +266,8 @@ void StopAndWait::sendAck() {
 	buf[0] = mSequenceNumber;
 	buf[1] = mAckNumber;
 	mSocket.sendTo(buf,2,mDestinationAddress, mDestinationPort);
+
+	cout << "Send Ack: " << (int)mAckNumber << endl;
 }
 /**
  * Assumes that there is an independent ack for eack data frame
@@ -250,6 +278,9 @@ bool StopAndWait::recvAck() {
 	mSocket.recvFrom(buf,2);
 
 	uint8_t receivedAck = buf[1];
+
+	cout << "Recv Ack: " << (int)receivedAck << endl;
+
 	if(receivedAck == mSequenceNumber) {
 		mLastReceivedAckNumber = receivedAck;
 		return true;

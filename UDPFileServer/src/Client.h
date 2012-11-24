@@ -17,7 +17,7 @@ public:
 	//Default big 3 are fine
 
 	///Send that data file
-	bool getFile(std::string dataFileName);
+	bool getFile(std::string dataFileName, uint32_t iDropPercentage);
 private:
 	std::string mServerName;
 	int mServerPort;

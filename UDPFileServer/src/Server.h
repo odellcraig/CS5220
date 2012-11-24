@@ -10,6 +10,7 @@
 #include "ARQBase.h"
 
 #include <string>
+#include <stdint.h>
 
 
 class Server {
@@ -18,7 +19,7 @@ public:
 	//Default Big three are fine
 
 	///Start the server
-	void start();
+	void start(uint32_t iDropPercentage);
 
 private:
 	///Used as the thread handler

@@ -24,10 +24,10 @@ Client::Client(std::string iServerName, std::string iServerPort,
 	mServerPort = Util::toShort(iServerPort);
 }
 
-bool Client::getFile(string dataFileName)
+bool Client::getFile(string dataFileName, uint32_t iDropPercentage)
 {
 	//Create Socket
-	UDPSocket socket;
+	UDPSocket socket(iDropPercentage);
 	if(!socket.createSocket()){ throw string("Error: create - socket creation failed."); }
 
 	//Create this on the heap so we can point a base at any one of the children

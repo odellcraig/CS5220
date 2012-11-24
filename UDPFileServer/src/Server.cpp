@@ -25,14 +25,14 @@ using namespace std;
 
 //Server without encryption
 Server::Server(string iPort, ARQBase::ARQType arqType) :
-		mARQType(arqType) {
+		mARQType(arqType){
 	mPort = Util::toShort(iPort);
 }
 
 
-void Server::start() {
+void Server::start(uint32_t iDropPercentage) {
 	//Create, bind
-	UDPSocket serverSocket;
+	UDPSocket serverSocket(iDropPercentage);
 	if (!serverSocket.createAndBind(mPort, NULL)) {
 		throw string("Error: create and bind - server socket error when creating socket.");
 	}

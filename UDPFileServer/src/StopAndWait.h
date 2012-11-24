@@ -31,7 +31,7 @@ public:
 
 
 	virtual void addHeaderToFront(std::deque<unsigned char> &buffer);
-	virtual void consumeHeaderSendAck(std::deque<unsigned char> &buffer);
+	virtual void consumeHeaderSendAck(uint8_t seq, uint8_t ack);
 
 	/**
 	 * Sends an independent ack for a received data frame

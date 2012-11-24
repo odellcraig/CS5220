@@ -21,15 +21,19 @@
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <stdint.h>
 
 #include <iostream>
 
 using namespace std;
 
 // ***************************************************************************
-UDPSocket::UDPSocket() {
-	sockfd = -1;
+UDPSocket::UDPSocket(): sockfd(-1), mDropPercentage(0) {
 }
+
+UDPSocket::UDPSocket(uint32_t iDropPercentage): sockfd(-1), mDropPercentage(iDropPercentage) {
+}
+
 
 // ***************************************************************************
 UDPSocket::~UDPSocket() {
@@ -164,8 +168,14 @@ int UDPSocket::sendTo(const char* buf, int bufLen,
 		return false;
 	}
 
-	int sendRtn = ::sendto(sockfd, (char*) buf, bufLen, flags, addr, addrSize);
-
+	int sendRtn = 0;
+	if(!isRandomDrop()) {
+		sendRtn = ::sendto(sockfd, (char*) buf, bufLen, flags, addr, addrSize);
+	}
+	else {
+		cout << "Random Drop!\n";
+		sendRtn = bufLen;
+	}
 	delete addr;
 	return sendRtn;
 }
@@ -267,3 +277,17 @@ bool UDPSocket::setSocketOptions() {
 	// This class doesn't need to do anything here but derived classes might.
 	return true;
 }
+
+bool UDPSocket::isRandomDrop() {
+
+	if(mDropPercentage == 0) {
+		return false;
+	}
+
+	unsigned int randomNumber = (rand()%100) + 1; //Random number between 1 and 100
+	if(randomNumber <= mDropPercentage) {
+		return true;
+	}
+	return false;
+}
+
