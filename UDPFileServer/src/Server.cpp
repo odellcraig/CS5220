@@ -45,7 +45,11 @@ void Server::start(uint32_t iDropPercentage) {
 			if(mARQType == ARQBase::ARQTypeStopAndWait) {
 				sendRecv = new StopAndWait(serverSocket);
 			}
-			//TODO: Add the analogous GoBackN and SelectiveRepeat ARQ's here
+			//TODO: add GoBackN
+			if(mARQType == ARQBase::ARQTypeSelectiveRepeat) {
+				sendRecv = new SelectiveRepeat(serverSocket);
+			}
+
 
 			cout << "Server - Waiting for request on port: " << mPort << '\n';
 
@@ -53,6 +57,8 @@ void Server::start(uint32_t iDropPercentage) {
 			string fileName = sendRecv->recvString(); //Get filename
 
 			cout << "Server - Received file name: " << fileName << '\n';
+
+			sleep(5);
 
 			//Open the file
 			ifstream inFile(fileName.c_str(), ios::in | ios::binary);
@@ -76,10 +82,14 @@ void Server::start(uint32_t iDropPercentage) {
 
 				cout << "Server - Sent file size of " << dataBuffer.size() << '\n';
 
+				sleep(5);
+
 				//Send file
 				sendRecv->sendData(dataBuffer);
 
 				cout << "Server - Sent file data.\n";
+
+				sleep(10);
 
 			} else {
 				cerr << "Server Error: opening file - " << inFile << " aborting";

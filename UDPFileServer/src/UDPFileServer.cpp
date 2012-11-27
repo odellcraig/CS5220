@@ -129,9 +129,9 @@ int main(int argc, char **argv) {
 		transferFileName = argv[1];
 
 		//Deal with the input arguments
-		Client client(serverName, port, arqType);
+		Client client(arqType);
 		try {
-			if (client.getFile(transferFileName,dropPercentage))
+			if (client.getFile(transferFileName,dropPercentage, serverName, Util::toShort(port)))
 				cout << "File Received. Done.\n";
 		} catch (const char *Error) {
 			cerr << Error << endl;

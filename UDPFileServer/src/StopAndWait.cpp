@@ -56,7 +56,7 @@ StopAndWait::StopAndWait(UDPSocket& iSocket, std::string& iDestinationAddress,
 StopAndWait::~StopAndWait() {}
 
 void StopAndWait::sendString(std::string sendStr) {
-	if(sendStr.length() > mSocket.getMaxSegmentSize()) {
+	if(sendStr.length() > mSocket.getMaxSegmentSize(HEADERSIZE)) {
 		throw string("Error - attempting to send string of size greater than internally defined max UDP length.");
 	}
 
@@ -75,14 +75,14 @@ void StopAndWait::sendInt(uint32_t i) {
 
 void StopAndWait::sendData(deque<unsigned char>& buffer) {
 
-	char buf[mSocket.getMaxSegmentSize()];
-	memset(buf, 0, mSocket.getMaxSegmentSize());
+	char buf[mSocket.getMaxSegmentSize(HEADERSIZE)+HEADERSIZE];
+	memset(buf, 0, mSocket.getMaxSegmentSize(HEADERSIZE)+HEADERSIZE);
 
 	while(buffer.size()) {
 
 		addHeaderToFront(buffer);												 // Add the header
 		mSequenceNumber = (mSequenceNumber+1)%2;								 // Increase seq number for packets after this one
-		int bytesCopied = consumeData(buf, buffer, mSocket.getMaxSegmentSize()); // Move that packet into buf
+		int bytesCopied = consumeData(buf, buffer, mSocket.getMaxSegmentSize(HEADERSIZE)); // Move that packet into buf
 
 		//Retx Loop Waits for Ack
 		bool success;
@@ -196,17 +196,17 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		unsigned int size) {
 
 	buffer.erase(buffer.begin(), buffer.end());
-	char receiveBuffer[mSocket.getMaxSegmentSize()];
-	memset(receiveBuffer, 0, mSocket.getMaxSegmentSize());
+	char receiveBuffer[mSocket.getMaxSegmentSize(HEADERSIZE)+HEADERSIZE];
+	memset(receiveBuffer, 0, sizeof(receiveBuffer));
 
 	//Receive a single datagram
 	if(size == 0) {
 		int recvBytes = 0;
 		if(mDestinationAddress == "" || mDestinationPort == 0) {
-			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize(), &mDestinationAddress, &mDestinationPort);
+			recvBytes = mSocket.recvFrom(receiveBuffer, sizeof(receiveBuffer), &mDestinationAddress, &mDestinationPort);
 		}
 		else {
-			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize());
+			recvBytes = mSocket.recvFrom(receiveBuffer, sizeof(receiveBuffer));
 		}
 
 		cout << "Received datagram of length: " << recvBytes << endl;
@@ -220,10 +220,10 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 	while(size) {
 		int recvBytes = 0;
 		if(mDestinationAddress == "" || mDestinationPort == 0) {
-			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize(), &mDestinationAddress, &mDestinationPort);
+			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize(HEADERSIZE), &mDestinationAddress, &mDestinationPort);
 		}
 		else {
-			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize());
+			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize(HEADERSIZE));
 		}
 
 		cout << "Received datagram of length: " << recvBytes << endl;
@@ -237,11 +237,10 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		consumeHeaderSendAck(receiveBuffer[0], receiveBuffer[1]);
 
 		//Clear out receive buffer
-		memset(receiveBuffer, 0, mSocket.getMaxSegmentSize());
+		memset(receiveBuffer, 0, mSocket.getMaxSegmentSize(HEADERSIZE));
 
 		cout << "Bytes Remaining: " << size << endl;
 	}
-
 }
 
 void StopAndWait::consumeHeaderSendAck(uint8_t seq, uint8_t ack) {

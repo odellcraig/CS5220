@@ -32,7 +32,7 @@ public:
     UDPSocket(uint32_t iDropPercentage);
     virtual ~UDPSocket();
 
-    unsigned int getMaxSegmentSize() {return 1472-2;}
+    unsigned int getMaxSegmentSize(int headerSize) {return 1472-headerSize;}
 
     // A UDP server socket is created with this function.  The code would
     // typically call and block on recvFrom() until packets arrive.
@@ -57,7 +57,7 @@ public:
                const std::string& destAddressString, unsigned short destPort,
                int flags = 0);
 
-    bool hasData(int timeOut); //milliseconds
+    bool hasData(int timeOut = 10); //milliseconds
 
     bool close();
 

@@ -38,7 +38,8 @@ public:
 	virtual uint32_t			recvInt() = 0;
 	virtual void 		recvData(std::deque<unsigned char> &, unsigned int size) = 0;
 
-protected:
+
+
 	UDPSocket &mSocket;
 	std::string mDestinationAddress;
 	uint16_t mDestinationPort;

@@ -18,13 +18,11 @@
 #include <iostream>
 using namespace std;
 
-Client::Client(std::string iServerName, std::string iServerPort,
-		ARQBase::ARQType arqType) :
-		mServerName(iServerName), mARQType(arqType) {
-	mServerPort = Util::toShort(iServerPort);
+Client::Client(ARQBase::ARQType arqType) :
+		mARQType(arqType) {
 }
 
-bool Client::getFile(string dataFileName, uint32_t iDropPercentage)
+bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host, uint16_t port)
 {
 	//Create Socket
 	UDPSocket socket(iDropPercentage);
@@ -33,12 +31,15 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage)
 	//Create this on the heap so we can point a base at any one of the children
 	ARQBase *sendRecv;
 	if(mARQType == ARQBase::ARQTypeStopAndWait) {
-		sendRecv = new StopAndWait(socket, mServerName, mServerPort);
+		sendRecv = new StopAndWait(socket, host, port);
 	}
-	//TODO: Add the analogous GoBackN and SelectiveRepeat ARQ's here
+	//TODO: add GoBackN
+	if(mARQType == ARQBase::ARQTypeSelectiveRepeat) {
+		sendRecv = new SelectiveRepeat(socket, host, port);
+	}
 
 	cout << "Client - UDP Socket Created.\n";
-	cout << "Client - Server Name: " << mServerName << " Server Port: " << mServerPort << '\n';
+	cout << "Client - Server Name: " << host << " Server Port: " << port << '\n';
 
 	try {
 		//Send file name
@@ -57,6 +58,8 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage)
 
 		cout << "Client - Received data.\n";
 
+		sleep(10);
+
 		//Dump to output file
 		cout << "Creating output file: " << dataFileName << endl;
 		ofstream outFile(dataFileName.c_str(), ios::out|ios::binary);
@@ -67,8 +70,8 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage)
 	}
 	catch(string &err) {
 		cerr << "Client - An error occurred:\n";
-		cerr << "  Server  = " << mServerName << '\n';
-		cerr << "  Port    = " << mServerPort << '\n';
+		cerr << "  Server  = " << host << '\n';
+		cerr << "  Port    = " << port << '\n';
 		cerr << "  ARQType = " << mARQType << '\n';
 		cerr << "Error: " << err << '\n';
 	}
