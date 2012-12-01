@@ -8,7 +8,6 @@
 #include "Client.h"
 #include "ARQBase.h"
 #include "StopAndWait.h"
-#include "GoBackN.h"
 #include "SelectiveRepeat.h"
 #include "UDPSocket.h"
 #include "Util.h"
@@ -33,8 +32,7 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host,
 	if(mARQType == ARQBase::ARQTypeStopAndWait) {
 		sendRecv = new StopAndWait(socket, host, port);
 	}
-	//TODO: add GoBackN
-	if(mARQType == ARQBase::ARQTypeSelectiveRepeat) {
+	if(mARQType == ARQBase::ARQTypeSelectiveRepeat || mARQType == ARQBase::ARQTypeGoBackN) {
 		sendRecv = new SelectiveRepeat(socket, host, port);
 	}
 
@@ -58,10 +56,9 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host,
 
 		cout << "Client - Received data.\n";
 
-		sleep(10);
 
 		//Dump to output file
-		cout << "Creating output file: " << dataFileName << endl;
+		cout << "Creating output file: " << dataFileName << '\n';
 		ofstream outFile(dataFileName.c_str(), ios::out|ios::binary);
 		if(!outFile)
 			throw string("Error: output file was not properly opened");
@@ -78,6 +75,7 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host,
 
 
 	//Cleanup
+	sendRecv->close();
 	socket.close();
 	delete sendRecv;
 	return true;

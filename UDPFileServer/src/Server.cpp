@@ -12,7 +12,6 @@
 #include "Server.h"
 #include "ARQBase.h"
 #include "StopAndWait.h"
-#include "GoBackN.h"
 #include "SelectiveRepeat.h"
 #include "UDPSocket.h"
 #include "Util.h"
@@ -31,6 +30,7 @@ Server::Server(string iPort, ARQBase::ARQType arqType) :
 
 
 void Server::start(uint32_t iDropPercentage) {
+
 	//Create, bind
 	UDPSocket serverSocket(iDropPercentage);
 	if (!serverSocket.createAndBind(mPort, NULL)) {
@@ -45,8 +45,7 @@ void Server::start(uint32_t iDropPercentage) {
 			if(mARQType == ARQBase::ARQTypeStopAndWait) {
 				sendRecv = new StopAndWait(serverSocket);
 			}
-			//TODO: add GoBackN
-			if(mARQType == ARQBase::ARQTypeSelectiveRepeat) {
+			if(mARQType == ARQBase::ARQTypeSelectiveRepeat || mARQType == ARQBase::ARQTypeGoBackN) {
 				sendRecv = new SelectiveRepeat(serverSocket);
 			}
 
@@ -58,7 +57,6 @@ void Server::start(uint32_t iDropPercentage) {
 
 			cout << "Server - Received file name: " << fileName << '\n';
 
-			sleep(5);
 
 			//Open the file
 			ifstream inFile(fileName.c_str(), ios::in | ios::binary);
@@ -82,18 +80,18 @@ void Server::start(uint32_t iDropPercentage) {
 
 				cout << "Server - Sent file size of " << dataBuffer.size() << '\n';
 
-				sleep(5);
 
 				//Send file
 				sendRecv->sendData(dataBuffer);
 
 				cout << "Server - Sent file data.\n";
 
-				sleep(10);
 
 			} else {
 				cerr << "Server Error: opening file - " << inFile << " aborting";
 			}
+
+			sendRecv->close();
 
 			delete sendRecv;
 		}
@@ -103,8 +101,11 @@ void Server::start(uint32_t iDropPercentage) {
 			cerr << "  ARQType = " << mARQType << '\n';
 			cerr << "Error: " << err << '\n';
 
+			sendRecv->close();
+			serverSocket.close();
 			delete sendRecv;
 		}
 	}
 	serverSocket.close();
+
 }

@@ -6,7 +6,6 @@
 CPP_SRCS += \
 ../src/ARQBase.cpp \
 ../src/Client.cpp \
-../src/GoBackN.cpp \
 ../src/SelectiveRepeat.cpp \
 ../src/Server.cpp \
 ../src/StopAndWait.cpp \
@@ -17,7 +16,6 @@ CPP_SRCS += \
 OBJS += \
 ./src/ARQBase.o \
 ./src/Client.o \
-./src/GoBackN.o \
 ./src/SelectiveRepeat.o \
 ./src/Server.o \
 ./src/StopAndWait.o \
@@ -28,7 +26,6 @@ OBJS += \
 CPP_DEPS += \
 ./src/ARQBase.d \
 ./src/Client.d \
-./src/GoBackN.d \
 ./src/SelectiveRepeat.d \
 ./src/Server.d \
 ./src/StopAndWait.d \
@@ -41,7 +38,7 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -O0 -g3 -Wall -c -fmessage-length=0 -pthread -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -O3 -Wall -c -fmessage-length=0 -pthread -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

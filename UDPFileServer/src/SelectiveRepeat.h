@@ -29,7 +29,12 @@ public:
 
 	class Segment {
 	public:
-		Segment(char *bytes, size_t length) {
+		Segment(char *bytes, size_t length):
+			sendTime(0),
+			needsTransmit(false),
+			needsRetransmit(false),
+			isLastLogicalSegment(false),
+			retxCount(0) {
 			setHeaderFromArray(bytes);
 
 			//If data
@@ -43,7 +48,9 @@ public:
 		Segment():
 			sendTime(0),
 			needsTransmit(false),
-			needsRetransmit(false) {
+			needsRetransmit(false),
+			isLastLogicalSegment(false),
+			retxCount(0) {
 			memset(&header, 0, sizeof(header));
 		}
 
@@ -73,10 +80,11 @@ public:
 
 
 
-		//TODO: need receiveTime?
 		uint32_t sendTime;
 		bool needsTransmit;
 		bool needsRetransmit;
+		bool isLastLogicalSegment;
+		unsigned int retxCount;
 		SegmentHeader header;
 		std::deque<unsigned char> data;
 	};
@@ -86,6 +94,8 @@ public:
 	SelectiveRepeat(UDPSocket &iSocket);
 	SelectiveRepeat(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort);
 	virtual ~SelectiveRepeat();
+
+	virtual void close();
 
 	//Helper methods for easy transfer of data, strings, and ints
 
@@ -152,8 +162,6 @@ public:
 	uint16_t mFarWindowsize;	//The advertised window of the far side (dictates how much we can send). Updated when we receive a dgram
 								// Note: our window is calculated by Default - receiveBuffer.size()
 								// Note: send window is mFarWindowSize - sendBuffer.size()
-
-	//TODO: need bounds on seq numbers we can accept (i.e. within sliding window)
 };
 
 #endif /* SELECTIVEREPEAT_H_ */

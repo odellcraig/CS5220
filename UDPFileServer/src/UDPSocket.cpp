@@ -27,6 +27,8 @@
 
 using namespace std;
 
+//#define DEBUG_INFO
+
 // ***************************************************************************
 UDPSocket::UDPSocket(): sockfd(-1), mDropPercentage(0) {
 }
@@ -173,7 +175,9 @@ int UDPSocket::sendTo(const char* buf, int bufLen,
 		sendRtn = ::sendto(sockfd, (char*) buf, bufLen, flags, addr, addrSize);
 	}
 	else {
+#ifdef DEBUG_INFO
 		cout << "Random Drop!\n";
+#endif
 		sendRtn = bufLen;
 	}
 	delete addr;
@@ -279,6 +283,8 @@ bool UDPSocket::setSocketOptions() {
 }
 
 bool UDPSocket::isRandomDrop() {
+
+	srand ( time(NULL) );
 
 	if(mDropPercentage == 0) {
 		return false;

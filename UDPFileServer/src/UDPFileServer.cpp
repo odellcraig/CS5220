@@ -48,7 +48,7 @@ void printUsage(string file) {
 	os << "\nClient Example:\n>" << file
 			<< " -c -p 1234 -t1 192.168.0.10 MyFile.txt\n";
 	os << "Server Example:\n>" << file << " -s -p 1234 -t1\n";
-	cerr << os.str() << endl;
+	cerr << os.str() << '\n';
 }
 
 int main(int argc, char **argv) {
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 		try {
 			server.start(dropPercentage);
 		} catch (string &Error) {
-			cerr << Error << endl;
+			cerr << Error << '\n';
 			exit(-1);
 		}
 	}
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
 			if (client.getFile(transferFileName,dropPercentage, serverName, Util::toShort(port)))
 				cout << "File Received. Done.\n";
 		} catch (const char *Error) {
-			cerr << Error << endl;
+			cerr << Error << '\n';
 			exit(-1);
 		}
 	}

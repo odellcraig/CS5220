@@ -27,6 +27,7 @@ public:
 	ARQBase(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort);
 	virtual ~ARQBase();
 
+	virtual void close();
 
 	//Helper methods for easy transfer of data, strings, and ints
 	virtual void sendString(std::string sendStr) = 0;

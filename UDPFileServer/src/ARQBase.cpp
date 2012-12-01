@@ -19,3 +19,5 @@ ARQBase::ARQBase(UDPSocket& iSocket, std::string &iDestinationAddress, uint16_t 
 ARQBase::~ARQBase() {
 }
 
+void ARQBase::close() {
+}

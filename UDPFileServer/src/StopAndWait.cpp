@@ -18,6 +18,9 @@
 
 using namespace std;
 
+#define DEBUG_INFO
+#define DEBUG_MORE
+//#define DEBUG_MOST
 
 namespace {
 	const int TIMEOUT = 1000; // 1000ms timeout
@@ -39,8 +42,9 @@ StopAndWait::StopAndWait(UDPSocket& iSocket, std::string& iDestinationAddress,
 		mSequenceNumber(0),
 		mAckNumber(0),
 		mLastReceivedAckNumber(-1){
-
-	cout << "StopAndWait::StopAndWait - Original servername: " << iDestinationAddress << endl;
+#ifdef DEBUG_INFO
+	cout << "StopAndWait::StopAndWait - Original servername: " << iDestinationAddress << '\n';
+#endif
 	struct hostent *h;						/* info about server */
 	h = gethostbyname(iDestinationAddress.c_str());		/* look up host's IP address */
 	if (!h) {
@@ -49,8 +53,9 @@ StopAndWait::StopAndWait(UDPSocket& iSocket, std::string& iDestinationAddress,
 	sockaddr_in m_addr;
 	memcpy(&m_addr.sin_addr.s_addr, h->h_addr, h->h_length);
 	mDestinationAddress = inet_ntoa(m_addr.sin_addr);
-
-	cout << "StopAndWait::StopAndWait - IP Address of server: " << mDestinationAddress << endl;
+#ifdef DEBUG_INFO
+	cout << "StopAndWait::StopAndWait - IP Address of server: " << mDestinationAddress << '\n';
+#endif
 }
 
 StopAndWait::~StopAndWait() {}
@@ -105,8 +110,9 @@ void StopAndWait::sendData(deque<unsigned char>& buffer) {
 
 bool StopAndWait::sendDatagramWaitForAck(char *buf, int length)
 {
-	cout << "Sending Datagram of length: " << length << endl;
-
+#ifdef DEBUG_MORE
+	cout << "Sending Datagram of length: " << length << '\n';
+#endif
 	//Send the packet
 	mSocket.sendTo(buf, length, mDestinationAddress, mDestinationPort);
 	uint32_t sendTime = Util::getCurrentTimeMs();
@@ -126,7 +132,9 @@ bool StopAndWait::sendDatagramWaitForAck(char *buf, int length)
 
 	}while((Util::getCurrentTimeMs() - sendTime) < TIMEOUT);
 
-	cerr << "Timeout!" << endl;
+#ifdef DEBUG_MORE
+	cerr << "Timeout!" << '\n';
+#endif
 
 	return false;
 }
@@ -208,8 +216,9 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		else {
 			recvBytes = mSocket.recvFrom(receiveBuffer, sizeof(receiveBuffer));
 		}
-
-		cout << "Received datagram of length: " << recvBytes << endl;
+#ifdef DEBUG_MORE
+		cout << "Received datagram of length: " << recvBytes << '\n';
+#endif
 
 		buffer.insert(buffer.end(), &receiveBuffer[2], &receiveBuffer[recvBytes]);
 		consumeHeaderSendAck(receiveBuffer[0], receiveBuffer[1]);
@@ -225,9 +234,9 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 		else {
 			recvBytes = mSocket.recvFrom(receiveBuffer, mSocket.getMaxSegmentSize(HEADERSIZE));
 		}
-
-		cout << "Received datagram of length: " << recvBytes << endl;
-
+#ifdef DEBUG_MORE
+		cout << "Received datagram of length: " << recvBytes << '\n';
+#endif
 		//Only count datagram if it's our expected sequence number
 		if(receiveBuffer[0] == mAckNumber){
 			size -= (recvBytes-HEADERSIZE);
@@ -238,8 +247,9 @@ void StopAndWait::recvData(deque<unsigned char>& buffer,
 
 		//Clear out receive buffer
 		memset(receiveBuffer, 0, mSocket.getMaxSegmentSize(HEADERSIZE));
-
-		cout << "Bytes Remaining: " << size << endl;
+#ifdef DEBUG_MOST
+		cout << "Bytes Remaining: " << size << '\n';
+#endif
 	}
 }
 
@@ -265,8 +275,9 @@ void StopAndWait::sendAck() {
 	buf[0] = mSequenceNumber;
 	buf[1] = mAckNumber;
 	mSocket.sendTo(buf,2,mDestinationAddress, mDestinationPort);
-
-	cout << "Send Ack: " << (int)mAckNumber << endl;
+#ifdef DEBUG_MORE
+	cout << "Send Ack: " << (int)mAckNumber << '\n';
+#endif
 }
 /**
  * Assumes that there is an independent ack for eack data frame
@@ -277,8 +288,9 @@ bool StopAndWait::recvAck() {
 	mSocket.recvFrom(buf,2);
 
 	uint8_t receivedAck = buf[1];
-
-	cout << "Recv Ack: " << (int)receivedAck << endl;
+#ifdef DEBUG_MORE
+	cout << "Recv Ack: " << (int)receivedAck << '\n';
+#endif
 
 	if(receivedAck == mSequenceNumber) {
 		mLastReceivedAckNumber = receivedAck;
