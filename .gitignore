@@ -2,6 +2,10 @@
 *.slo
 *.lo
 *.o
+*.d
+
+TCPFileServer/Release/TCPFileServer
+UDPFileServer/Release/UDPFileServer
 
 # Compiled Dynamic libraries
 *.so
@@ -12,4 +16,6 @@
 *.la
 *.a
 OriginalCode/Debug/
-TCPFileServer/Debug/src/TCPFileServer.d
+
+
+

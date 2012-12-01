@@ -137,7 +137,6 @@ bool Socket::connect(const std::string host, const int port) {
 		return false;
 
 	struct hostent *h;						/* info about server */
-	struct sockaddr_in channel;				/* holds IP address */
 	h = gethostbyname(host.c_str());		/* look up host's IP address */
 	if (!h) {
 		throw string("Error - gethostbyname failed. Aborting.");
