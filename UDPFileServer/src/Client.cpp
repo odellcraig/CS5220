@@ -21,7 +21,7 @@ Client::Client(ARQBase::ARQType arqType) :
 		mARQType(arqType) {
 }
 
-bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host, uint16_t port)
+bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host, uint16_t port, ofstream &traceFile)
 {
 	//Create Socket
 	UDPSocket socket(iDropPercentage);
@@ -30,10 +30,10 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host,
 	//Create this on the heap so we can point a base at any one of the children
 	ARQBase *sendRecv;
 	if(mARQType == ARQBase::ARQTypeStopAndWait) {
-		sendRecv = new StopAndWait(socket, host, port);
+		sendRecv = new StopAndWait(socket, host, port, traceFile);
 	}
 	if(mARQType == ARQBase::ARQTypeSelectiveRepeat || mARQType == ARQBase::ARQTypeGoBackN) {
-		sendRecv = new SelectiveRepeat(socket, host, port);
+		sendRecv = new SelectiveRepeat(socket, host, port, traceFile);
 	}
 
 	cout << "Client - UDP Socket Created.\n";
@@ -74,9 +74,14 @@ bool Client::getFile(string dataFileName, uint32_t iDropPercentage, string host,
 	}
 
 
+
 	//Cleanup
 	sendRecv->close();
 	socket.close();
 	delete sendRecv;
+
+	// Flush
+	traceFile << endl;
+
 	return true;
 }

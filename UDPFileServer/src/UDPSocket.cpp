@@ -27,13 +27,17 @@
 
 using namespace std;
 
-//#define DEBUG_INFO
+#define DEBUG_INFO
 
 // ***************************************************************************
 UDPSocket::UDPSocket(): sockfd(-1), mDropPercentage(0) {
 }
 
 UDPSocket::UDPSocket(uint32_t iDropPercentage): sockfd(-1), mDropPercentage(iDropPercentage) {
+	if(mDropPercentage) {
+		cout << "Dropping " << mDropPercentage << " percent of packets.\n";
+	}
+	srand ( time(NULL) );
 }
 
 
@@ -72,6 +76,7 @@ bool UDPSocket::createSocket() {
 		sockfd = -1;
 		return false;
 	}
+
 
 	return true;
 }
@@ -175,6 +180,7 @@ int UDPSocket::sendTo(const char* buf, int bufLen,
 		sendRtn = ::sendto(sockfd, (char*) buf, bufLen, flags, addr, addrSize);
 	}
 	else {
+
 #ifdef DEBUG_INFO
 		cout << "Random Drop!\n";
 #endif
@@ -284,13 +290,15 @@ bool UDPSocket::setSocketOptions() {
 
 bool UDPSocket::isRandomDrop() {
 
-	srand ( time(NULL) );
 
 	if(mDropPercentage == 0) {
 		return false;
 	}
 
+
 	unsigned int randomNumber = (rand()%100) + 1; //Random number between 1 and 100
+
+
 	if(randomNumber <= mDropPercentage) {
 		return true;
 	}

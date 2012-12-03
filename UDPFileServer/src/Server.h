@@ -10,6 +10,7 @@
 #include "ARQBase.h"
 
 #include <string>
+#include <fstream>
 #include <stdint.h>
 
 
@@ -19,7 +20,7 @@ public:
 	//Default Big three are fine
 
 	///Start the server
-	void start(uint32_t iDropPercentage);
+	void start(uint32_t iDropPercentage, std::ofstream &traceFile);
 
 private:
 	///Used as the thread handler

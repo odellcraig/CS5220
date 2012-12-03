@@ -11,6 +11,7 @@
 #include "ARQBase.h"
 
 #include <deque>
+#include <fstream>
 #include <stdint.h>
 #include <cstring>
 #include <arpa/inet.h>
@@ -55,6 +56,7 @@ public:
 		}
 
 
+
 		void getHeaderIntoArray(char *buf){
 			SegmentHeader tempHeader;
 			//Make sure we're network byte order
@@ -91,8 +93,8 @@ public:
 
 
 
-	SelectiveRepeat(UDPSocket &iSocket);
-	SelectiveRepeat(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort);
+	SelectiveRepeat(UDPSocket &iSocket, std::ofstream &traceFile);
+	SelectiveRepeat(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort, std::ofstream &traceFile);
 	virtual ~SelectiveRepeat();
 
 	virtual void close();
@@ -162,6 +164,9 @@ public:
 	uint16_t mFarWindowsize;	//The advertised window of the far side (dictates how much we can send). Updated when we receive a dgram
 								// Note: our window is calculated by Default - receiveBuffer.size()
 								// Note: send window is mFarWindowSize - sendBuffer.size()
+	uint32_t mOutstandingSegments;  // Unacked Segments
+
+	std::ofstream &mTraceFile;
 };
 
 #endif /* SELECTIVEREPEAT_H_ */

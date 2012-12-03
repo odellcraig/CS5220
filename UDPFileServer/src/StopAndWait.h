@@ -10,12 +10,13 @@
 #include "ARQBase.h"
 
 #include <deque>
+#include <fstream>
 #include <stdint.h>
 
 class StopAndWait: public ARQBase {
 public:
-	StopAndWait(UDPSocket &iSocket);
-	StopAndWait(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort);
+	StopAndWait(UDPSocket &iSocket, std::ofstream &traceFile);
+	StopAndWait(UDPSocket &iSocket, std::string &iDestinationAddress, uint16_t iDestinationPort, std::ofstream &traceFile);
 	virtual ~StopAndWait();
 
 	//Helper methods for easy transfer of data, strings, and ints
@@ -57,6 +58,8 @@ protected:
 	uint8_t mSequenceNumber;		// 0 or 1 - starting with 0
 	uint8_t mAckNumber;				// 0 or 1 - ack number of 0 means expecting packet with seq 0
 	uint8_t mLastReceivedAckNumber; // for dup-ack detection
+
+	std::ofstream &mTraceFile;
 
 };
 

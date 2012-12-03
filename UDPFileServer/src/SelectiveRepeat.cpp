@@ -20,9 +20,9 @@
 
 using namespace std;
 
-//#define DEBUG_INFO
-//#define DEBUG_MORE
-//#define DEBUG_MOST
+#define DEBUG_INFO
+#define DEBUG_MORE
+#define DEBUG_MOST
 
 namespace {
 const int HEADERSIZE = 10;
@@ -36,7 +36,7 @@ const int DATA_WAIT_SLEEP_US = 1000 * 10;
 //Timeout
 const int RETX_TIMEOUT_MS = 1000 * 2; // 2 seconds
 
-const int DEFAULT_WINDOW_SIZE = 256;
+const int DEFAULT_WINDOW_SIZE = 1024;
 
 //Threads for Sending, Receiving, and Monitoring
 pthread_t senderThread, receiverThread, monitorThread;
@@ -60,24 +60,39 @@ deque<unsigned char> receiveStream;
 void *SenderThreadFunction(void *sr);
 void *ReceiverThreadFunction(void *sr);
 void *MonitorThreadFunction(void *sr);
+
+
+
+std::ostream& operator<<(std::ostream& os, const SelectiveRepeat::Segment& obj)
+	{
+		os << "Seq = " << obj.header.seqNumber;
+		os << " Ack = " << obj.header.ackNumber;
+		os << " Retx = " << obj.retxCount;
+		os << " Win = " << obj.header.windowSize;
+		os << " Len = " << obj.data.size();
+		return os;
+	}
+
 }
 
 /****************************************************************/
-SelectiveRepeat::SelectiveRepeat(UDPSocket &iSocket) :
+SelectiveRepeat::SelectiveRepeat(UDPSocket &iSocket, ofstream &traceFile) :
 		ARQBase(iSocket), mCurrentAck(0), mCurrentSeq(0), mLastReceivedAck(0), mFarWindowsize(
-				256) {
+				256), mOutstandingSegments(0),
+				mTraceFile(traceFile) {
 	startThreads();
 }
 
 /****************************************************************/
 SelectiveRepeat::SelectiveRepeat(UDPSocket& iSocket,
-		std::string& iDestinationAddress, uint16_t iDestinationPort) :
+		std::string& iDestinationAddress, uint16_t iDestinationPort, ofstream &traceFile) :
 		ARQBase(iSocket, iDestinationAddress, iDestinationPort), mCurrentAck(0), mCurrentSeq(
-				0), mLastReceivedAck(0), mFarWindowsize(256) {
+				0), mLastReceivedAck(0), mFarWindowsize(256), mOutstandingSegments(0),
+				mTraceFile(traceFile) {
 
 #ifdef DEBUG_INFO
 	cout << "SelectiveRepeat::SelectiveRepeat - Original servername: "
-			<< iDestinationAddress << '\n';
+			<< iDestinationAddress << endl;
 #endif
 
 	struct hostent *h; /* info about server */
@@ -91,7 +106,7 @@ SelectiveRepeat::SelectiveRepeat(UDPSocket& iSocket,
 
 #ifdef DEBUG_INFO
 	cout << "SelectiveRepeat::SelectiveRepeat - IP Address of server: "
-			<< mDestinationAddress << '\n';
+			<< mDestinationAddress << endl;
 #endif
 
 	startThreads();
@@ -295,19 +310,23 @@ void SelectiveRepeat::sendSegment(Segment& seg) {
 		sendBytes[i + HEADERSIZE] = seg.data[i];
 	}
 
+	mTraceFile << seg << endl;
+
 #ifdef DEBUG_MOST
 	cout << "sendSegment():\n";
-	cout << "  Seq = " << seg.header.seqNumber << '\n';
-	cout << "  Ack = " << seg.header.ackNumber << '\n';
-	cout << "  Win = " << seg.header.windowSize << '\n';
-	cout << "  Ret = " << seg.needsRetransmit << '\n';
-	cout << "  RC  = " << seg.retxCount << '\n';
-	cout << "  Datalen = " << seg.data.size() << '\n';
+	cout << "  Seq = " << seg.header.seqNumber << endl;
+	cout << "  Ack = " << seg.header.ackNumber << endl;
+	cout << "  Win = " << seg.header.windowSize << endl;
+	cout << "  Ret = " << seg.needsRetransmit << endl;
+	cout << "  RC  = " << seg.retxCount << endl;
+	cout << "  Datalen = " << seg.data.size() << endl;
 	//Util::dump(seg.data);
 #endif
 
 	mSocket.sendTo(sendBytes, sizeof(sendBytes), mDestinationAddress,
 			mDestinationPort);
+
+	mOutstandingSegments++;
 
 }
 
@@ -317,14 +336,11 @@ void SelectiveRepeat::sendAck() {
 	bool ackUpdated = false;
 
 
-
-
-
 	//Note: sendTime,ackNumber,windowSize set when segment is sent.
 	{ // Guard sendBuffer
 #ifdef DEBUG_MOST
 		cout << "sendAck() - adding or updating Ack. Size was = "
-				<< sendBuffer.size() << '\n';
+				<< sendBuffer.size() << endl;
 #endif
 		GuardMutex G(&mutexSendBuffer);
 
@@ -334,6 +350,7 @@ void SelectiveRepeat::sendAck() {
 			if(it->data.size() == 0) {
 				ackUpdated = true;
 				it->header.ackNumber = mCurrentAck;
+				it->needsTransmit = true;
 			}
 		}
 
@@ -350,7 +367,7 @@ void SelectiveRepeat::sendAck() {
 		}
 #ifdef DEBUG_MOST
 		cout << "sendAck() - adding or updating Ack. Size now = "
-				<< sendBuffer.size() << '\n';
+				<< sendBuffer.size() << endl;
 #endif
 
 	} // Guard sendBuffer
@@ -363,7 +380,10 @@ void SelectiveRepeat::processDataSegment(Segment& seg) {
 		GuardMutex G2(&mutexRecieveStream);
 
 		//Only receive if it's one we want. FIXME: not accounting for roll over, but this isn't production code
-		if(seg.header.seqNumber < mCurrentAck) return;
+		if(seg.header.seqNumber < mCurrentAck){
+			sendAck();
+			return;
+		}
 
 
 		// First, add this segment to the receiveBuffer in order if we have not yet received this segment
@@ -377,12 +397,12 @@ void SelectiveRepeat::processDataSegment(Segment& seg) {
 				|| it->header.seqNumber > seg.header.seqNumber) {
 			receiveBuffer.insert(it, seg);
 		}
-#if DEBUG_MOST
+#ifdef DEBUG_MOST
 		cout << "Receive Buffer Seqs:\n";
 		for (it = receiveBuffer.begin(); it != receiveBuffer.end(); ++it) {
 			cout << "Seq = " << it->header.seqNumber << ' ';
 		}
-		cout << '\n';
+		cout << endl;
 #endif
 
 		// Second, scan through to find our next expected segment and set mCurrentAck
@@ -409,7 +429,7 @@ void SelectiveRepeat::processDataSegment(Segment& seg) {
 						donePackets->data.begin(), donePackets->data.end());
 			}
 #ifdef DEBUG_MORE
-			cout << "Now removing packets from " << receiveBuffer.begin()->header.seqNumber << " to but not including " << ((it == receiveBuffer.end())? -1 : it->header.seqNumber) << '\n';
+			cout << "Now removing packets from " << receiveBuffer.begin()->header.seqNumber << " to but not including " << ((it == receiveBuffer.end())? -1 : it->header.seqNumber) << endl;
 #endif
 			receiveBuffer.erase(receiveBuffer.begin(), it);
 		}
@@ -437,6 +457,7 @@ void SelectiveRepeat::processSegmentHeader(Segment& seg) {
 			//If this is a last logical segment and it is now acked, signal the guy waiting
 			if (it->isLastLogicalSegment
 					&& it->header.seqNumber < seg.header.ackNumber) {
+				mOutstandingSegments--;
 				{ // Guard on LastLogicalSegmentAckedOrRetxLimit
 					GuardMutex g(&mutexLastLogicalSegmentAckedOrRetxLimit);
 #ifdef DEBUG_MOST
@@ -498,17 +519,27 @@ void *SenderThreadFunction(void *sr) {
 				if (it->needsTransmit || it->needsRetransmit) {
 
 					//If we have too much outstanding data, don't send this data packet, but keep looking for any ctl packets
-					if (it->data.size()
-							&& (me->mFarWindowsize - (sendBuffer.size() - 1))
-									<= 0) {
+					int realWindow = ((int)me->mFarWindowsize - ((int)me->mOutstandingSegments));
+					if (it->data.size()	&& (realWindow <= 0)) {
+
 						continue;
 					} // -1 is so we don't count this packet that's now in the buffer
 
 					//Send the segment
 					me->sendSegment(*it);
 
+					uint32_t sendTime = Util::getCurrentTimeMs();
+
+					//If that was a retransmit, then go and update the send times of all later packets
+					if(it->needsRetransmit) {
+						deque<SelectiveRepeat::Segment>::iterator jt;
+						for (jt = it; jt != sendBuffer.end(); ++jt) {
+							jt->sendTime = sendTime;
+						}
+					}
+
 					//Update the segment flags
-					it->sendTime = Util::getCurrentTimeMs();
+					it->sendTime = sendTime;
 					it->needsTransmit = false;
 					it->needsRetransmit = false;
 					// If ack, don't keep it
@@ -583,10 +614,10 @@ void *ReceiverThreadFunction(void *sr) {
 		SelectiveRepeat::Segment seg(receiveArray, recvBytes);
 #ifdef DEBUG_MOST
 		cout << "\nreceiveSegment():\n";
-		cout << "  Seq = " << seg.header.seqNumber << '\n';
-		cout << "  Ack = " << seg.header.ackNumber << '\n';
-		cout << "  Win = " << seg.header.windowSize << '\n';
-		cout << "  Datalen = " << seg.data.size() << '\n';
+		cout << "  Seq = " << seg.header.seqNumber << endl;
+		cout << "  Ack = " << seg.header.ackNumber << endl;
+		cout << "  Win = " << seg.header.windowSize << endl;
+		cout << "  Datalen = " << seg.data.size() << endl;
 		//Util::dump(seg.data);
 #endif
 
@@ -597,6 +628,8 @@ void *ReceiverThreadFunction(void *sr) {
 		if (seg.data.size()) {
 			me->processDataSegment(seg);
 		}
+
+		usleep(DATA_WAIT_SLEEP_US);
 	}
 
 	return NULL;
@@ -607,6 +640,7 @@ void *MonitorThreadFunction(void *sr) {
 #ifdef DEBUG_INFO
 	cout << "SelectiveRepeat::MonitorThreadFunction - thread started\n";
 #endif
+
 	// Do this forever
 	while (true) {
 
@@ -622,11 +656,11 @@ void *MonitorThreadFunction(void *sr) {
 						> RETX_TIMEOUT_MS) {
 					if (it->retxCount < RETX_LIMIT) {
 #ifdef DEBUG_MORE
-						cout << "Timeout! Retransmitting " << it->header.seqNumber << " len = " << it->data.size() << '\n';
+						cout << "Timeout! Retransmitting " << it->header.seqNumber << " len = " << it->data.size() << endl;
 #endif
-
 						it->needsRetransmit = true;
 						it->retxCount++;
+						break;
 					} else { // Give up
 						{ // Guard on LastLogicalSegmentAckedOrRetxLimit
 							GuardMutex g(
@@ -645,6 +679,7 @@ void *MonitorThreadFunction(void *sr) {
 				}
 			}
 		} //Guard sendBuffer
+
 	}
 	return NULL;
 }

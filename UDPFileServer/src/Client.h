@@ -10,6 +10,7 @@
 #include "ARQBase.h"
 
 #include <string>
+#include <fstream>
 #include <stdint.h>
 
 class Client {
@@ -18,7 +19,7 @@ public:
 	//Default big 3 are fine
 
 	///Send that data file
-	bool getFile(std::string dataFileName, uint32_t iDropPercentage, std::string host, uint16_t port);
+	bool getFile(std::string dataFileName, uint32_t iDropPercentage, std::string host, uint16_t port, std::ofstream &traceFile);
 private:
 	ARQBase::ARQType mARQType;
 };

@@ -29,7 +29,7 @@ Server::Server(string iPort, ARQBase::ARQType arqType) :
 }
 
 
-void Server::start(uint32_t iDropPercentage) {
+void Server::start(uint32_t iDropPercentage, ofstream &traceFile) {
 
 	//Create, bind
 	UDPSocket serverSocket(iDropPercentage);
@@ -43,10 +43,10 @@ void Server::start(uint32_t iDropPercentage) {
 		try {
 			//Create this on the heap so we can point a base at any one of the children
 			if(mARQType == ARQBase::ARQTypeStopAndWait) {
-				sendRecv = new StopAndWait(serverSocket);
+				sendRecv = new StopAndWait(serverSocket, traceFile);
 			}
 			if(mARQType == ARQBase::ARQTypeSelectiveRepeat || mARQType == ARQBase::ARQTypeGoBackN) {
-				sendRecv = new SelectiveRepeat(serverSocket);
+				sendRecv = new SelectiveRepeat(serverSocket, traceFile);
 			}
 
 
@@ -91,9 +91,13 @@ void Server::start(uint32_t iDropPercentage) {
 				cerr << "Server Error: opening file - " << inFile << " aborting";
 			}
 
-			sendRecv->close();
 
+
+			sendRecv->close();
 			delete sendRecv;
+
+			//Flush
+			traceFile << endl;
 		}
 		catch(string &err) {
 			cerr << "An error occurred:\n";

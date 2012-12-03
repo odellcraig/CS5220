@@ -44,7 +44,8 @@ void printUsage(string file) {
 			<< "\n\t-s              #Act as server"
 			<< "\n\t-p portNumber	#Use this port"
 			<< "\n\t-t <ARQ-Type>   #1 - Stop and Wait, 2 - Go Back N, 3 - Selective Repeat"
-			<< "\n\t-d <dropPercentage> #Integer percentage of packets to drop\n";
+			<< "\n\t-d <dropPercentage> #Integer percentage of packets to drop"
+			<< "\n\t-o <output trace file>\n";
 	os << "\nClient Example:\n>" << file
 			<< " -c -p 1234 -t1 192.168.0.10 MyFile.txt\n";
 	os << "Server Example:\n>" << file << " -s -p 1234 -t1\n";
@@ -62,7 +63,8 @@ int main(int argc, char **argv) {
 	ARQBase::ARQType arqType = ARQBase::ARQTypeStopAndWait;
 	string port = DEFAULT_PORT;
 	uint32_t dropPercentage = 0;
-	while ((optChar = getopt(argc, argv, "h?csp:t:d:")) != -1) {
+	string traceFileName = "outputTrace.txt";
+	while ((optChar = getopt(argc, argv, "h?csp:t:d:o:")) != -1) {
 		switch (optChar) {
 		case '?':
 		case 'h':
@@ -91,6 +93,9 @@ int main(int argc, char **argv) {
 				exit(-1);
 			}
 			break;
+		case 'o':
+			traceFileName = optarg;
+			break;
 		default:
 			printUsage(binaryName);
 			exit(-1);
@@ -106,11 +111,19 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
+
+	ofstream traceFile(traceFileName.c_str());
+	if(!traceFile) {
+		cerr << "Error: could not open output tracefile: " << traceFileName << '\n';
+		exit(-1);
+	}
+
+
 	/* If Operating as a Server */
 	if (isServer) {
 		Server server(port, arqType);
 		try {
-			server.start(dropPercentage);
+			server.start(dropPercentage, traceFile);
 		} catch (string &Error) {
 			cerr << Error << '\n';
 			exit(-1);
@@ -131,7 +144,7 @@ int main(int argc, char **argv) {
 		//Deal with the input arguments
 		Client client(arqType);
 		try {
-			if (client.getFile(transferFileName,dropPercentage, serverName, Util::toShort(port)))
+			if (client.getFile(transferFileName,dropPercentage, serverName, Util::toShort(port), traceFile))
 				cout << "File Received. Done.\n";
 		} catch (const char *Error) {
 			cerr << Error << '\n';

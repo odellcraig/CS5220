@@ -28,20 +28,22 @@ namespace {
 	const int RETX_LIMIT = 10;
 }
 
-StopAndWait::StopAndWait(UDPSocket &iSocket) :
+StopAndWait::StopAndWait(UDPSocket &iSocket, ofstream &traceFile) :
 		ARQBase(iSocket),
 		mSequenceNumber(0),
 		mAckNumber(0),
-		mLastReceivedAckNumber(-1)
+		mLastReceivedAckNumber(-1),
+		mTraceFile(traceFile)
 {}
 
 
 StopAndWait::StopAndWait(UDPSocket& iSocket, std::string& iDestinationAddress,
-		uint16_t iDestinationPort) :
+		uint16_t iDestinationPort, ofstream &traceFile) :
 		ARQBase(iSocket, iDestinationAddress, iDestinationPort),
 		mSequenceNumber(0),
 		mAckNumber(0),
-		mLastReceivedAckNumber(-1){
+		mLastReceivedAckNumber(-1),
+		mTraceFile(traceFile){
 #ifdef DEBUG_INFO
 	cout << "StopAndWait::StopAndWait - Original servername: " << iDestinationAddress << '\n';
 #endif
@@ -93,6 +95,7 @@ void StopAndWait::sendData(deque<unsigned char>& buffer) {
 		bool success;
 		int retxCount = 0;
 		do {
+			mTraceFile << "Seq = " << (mSequenceNumber+1)%2 << " Data Length = " << bytesCopied << "Retx: " << retxCount << '\n';
 			success = sendDatagramWaitForAck(buf, bytesCopied);
 			if(!success) cerr << "Retransmit!\n";
 			retxCount++;
@@ -274,6 +277,7 @@ void StopAndWait::sendAck() {
 	char buf[2];
 	buf[0] = mSequenceNumber;
 	buf[1] = mAckNumber;
+	mTraceFile << " Seq = " << mSequenceNumber << " Ack = " << mAckNumber << '\n';
 	mSocket.sendTo(buf,2,mDestinationAddress, mDestinationPort);
 #ifdef DEBUG_MORE
 	cout << "Send Ack: " << (int)mAckNumber << '\n';

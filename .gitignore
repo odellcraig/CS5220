@@ -6,6 +6,8 @@
 
 TCPFileServer/Release/TCPFileServer
 UDPFileServer/Release/UDPFileServer
+tcpTest/*
+udpTest/*
 
 # Compiled Dynamic libraries
 *.so
