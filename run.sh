@@ -2,7 +2,7 @@ PORT_NUM=2860
 UDP_DIR=./UDPFileServer/Release
 TCP_DIR=./TCPFileServer/Release
 LOG_DIR=./logs
-LOSS_PCT=1
+LOSS_PCT=5
 
 
 # Build both binaries
